@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インフルエンサー・コミュニティ診断システム v3.5</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Custom Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- Simple Icon Component (Replacing Lucide for Standalone) ---
+        const Icons = {
+            BookOpen: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+            Target: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+            Users: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+            Video: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>,
+            Dumbbell: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>,
+            Heart: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
+            AlertTriangle: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+            Check: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+            X: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+            ChevronDown: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+            ChevronUp: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>,
+            Activity: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+            Scale: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>,
+            Shield: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+            Star: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+            Zap: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+            GitMerge: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>,
+            Move: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>,
+            MousePointerClick: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4.1 12 6"/><path d="m5.1 8-2.9-.8"/><path d="m6 12-1.9 2"/><path d="M7.2 2.2 8 5.1"/><path d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074l-4.5-11z"/></svg>,
+            List: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        };
+
+        // --- Data Definitions (Simplified for High School Students) ---
+        const GATEWAY_STEPS = [
+            { id: 'C', label: 'Step 1: ジム型チェック', question: '【スキル・メリット】重視？', sub: 'The Gym', desc: 'お金・筋肉・資格など、目に見える成果やスキルを求めている？', color: 'orange', icon: <Icons.Dumbbell className="w-5 h-5" /> },
+            { id: 'B', label: 'Step 2: シアター型チェック', question: '【物語・世界観】重視？', sub: 'The Theater', desc: '波乱万丈な人生を、映画やドキュメンタリーのように見ている？', color: 'violet', icon: <Icons.Video className="w-5 h-5" /> },
+            { id: 'A', label: 'Step 3: ミラー型チェック', question: '【共感・真似したい】重視？', sub: 'The Mirror', desc: '「私もこうなりたい！」「真似したい！」と思われている？', color: 'teal', icon: <Icons.Users className="w-5 h-5" /> },
+            { id: 'D', label: 'Step 4: アイドル型チェック', question: '【見た目・尊さ】重視？', sub: 'The Idol', desc: '中身より、外見やキャラそのものが「尊い」と推されている？', color: 'pink', icon: <Icons.Heart className="w-5 h-5" /> }
+        ];
+
+        const SCORING_A = [
+            { title: "1. キャラクター・世界観", levels: [{ score: 0, text: "宣伝ばかりで、その人らしさが見えない" }, { score: 2, text: "どんな人かはわかるけど、考え方がブレている" }, { score: 4, text: "「この人といえばコレ！」という一貫した世界観がある" }, { score: 6, text: "その人の生き方自体が、みんなの憧れブランドになっている" }] },
+            { title: "2. リアルな日常見せ", levels: [{ score: 0, text: "普段の生活が全く見えない" }, { score: 2, text: "たまに見せるけど、作られた感じでリアルじゃない" }, { score: 4, text: "家事や食事など、リアルな裏側が見えて真似できる" }, { score: 6, text: "「その暮らし方」自体が流行りになり、みんなが真似している" }] },
+            { title: "3. みんなで語れるテーマ", levels: [{ score: 0, text: "ファン同士で語り合える共通の話題がない" }, { score: 2, text: "話題がバラバラで、何で盛り上がればいいかわからない" }, { score: 4, text: "「〇〇についてならこの人！」という明確なテーマがある" }, { score: 6, text: "そのテーマの第一人者として、界隈の中心にいる" }] },
+            { title: "4. 「わかる！」という悩み共有", levels: [{ score: 0, text: "悩みや弱音を一切見せない" }, { score: 2, text: "悩みは言うけど、ただの愚痴で共感できない" }, { score: 4, text: "「私と同じ悩みだ！」という人が集まっている" }, { score: 6, text: "深い悩みを分かち合う、仲間のような場所になっている" }] },
+            { title: "5. 毎日のルーティン化", levels: [{ score: 0, text: "いつ投稿されるか全然わからない" }, { score: 4, text: "「朝はこれを見る」など、ファンの習慣になっている" }, { score: 6, text: "生活の一部（インフラ）になり、見ないと落ち着かないレベル" }] },
+            { title: "6. 活動を続けられる力", levels: [{ score: 0, text: "投稿や企画が少なく、サボり気味" }, { score: 4, text: "ライブや企画を、自分でどんどん回せている" }, { score: 6, text: "イベントや運営もバリバリこなす、リーダー気質がある" }] },
+            { title: "7. 人生を変える影響力", levels: [{ score: 0, text: "「かわいい」だけで、特に影響はない" }, { score: 4, text: "紹介した物が売れたり、生活習慣を真似されたりする" }, { score: 6, text: "進路や生き方の手本として、人生の決断に影響を与えている" }] },
+            { title: "8. 近すぎず遠すぎない距離感", levels: [{ score: 0, text: "近すぎて友達感覚か、遠すぎて別世界の人" }, { score: 4, text: "親しみやすいけど憧れる、「身近なカリスマ」" }, { score: 6, text: "「将来こうなりたい」と思われる、理想のロールモデル" }] }
+        ];
+
+        const SCORING_B = [
+            { title: "1. 独自の言葉選び", levels: [{ score: 0, text: "どこにでもある普通の言葉しか使わない" }, { score: 4, text: "ファンだけに通じる「合言葉」や「名言」がある" }, { score: 6, text: "その人の言葉が流行語になったり、辞書に載るレベル" }] },
+            { title: "2. 物語の面白さ", levels: [{ score: 0, text: "過去が謎で、ストーリーがない" }, { score: 4, text: "「挫折からの逆転劇」など、応援したくなる物語がある" }, { score: 6, text: "人生そのものがマンガのようにドラマチックで面白い" }] },
+            { title: "3. ライバルや敵の設定", levels: [{ score: 0, text: "誰にでもいい顔をしていて、主張がない" }, { score: 4, text: "「古い常識 vs 私たち」のような構図がはっきりしている" }, { score: 6, text: "社会を変えるリーダーとして、時代の最先端にいる" }] },
+            { title: "4. 行動に移す力", levels: [{ score: 0, text: "口だけで何も行動していない" }, { score: 4, text: "言ったことを実際に形（イベントや作品）にしている" }, { score: 6, text: "社会を巻き込んで、本当に世の中を変える実績を出している" }] },
+            { title: "5. 愛されるダメな部分", levels: [{ score: 0, text: "完璧すぎて隙がない、または性格が悪いだけ" }, { score: 4, text: "「私が支えなきゃ」と思わせる、可愛い欠点がある" }, { score: 6, text: "ダメな部分さえも魅力になり、みんなで助け合う文化がある" }] }
+        ];
+
+        const SCORING_C = [
+            { title: "1. 実績のすごさ", levels: [{ score: 0, text: "実績がない、または嘘っぽい" }, { score: 4, text: "誰もが認める数字や結果（優勝、売上など）がある" }, { score: 6, text: "その道のレジェンドとして、圧倒的な信頼がある" }] },
+            { title: "2. 真似しやすさ", levels: [{ score: 0, text: "天才すぎて、凡人には真似できない" }, { score: 4, text: "「こうすればできる」という手順がわかりやすい" }, { score: 6, text: "誰がやっても結果が出る、魔法のようなメソッドがある" }] },
+            { title: "3. 切磋琢磨できる環境", levels: [{ score: 0, text: "一人で頑張るだけで、仲間がいない" }, { score: 4, text: "ランキングやチーム戦など、競い合える仕組みがある" }, { score: 6, text: "教え合い、助け合う文化が完全にできあがっている" }] },
+            { title: "4. 成長が見える仕組み", levels: [{ score: 0, text: "どこまでやればいいかわからない" }, { score: 4, text: "ランクやバッジがあって、レベルアップが楽しい" }, { score: 6, text: "ここでのランクが、社会的なステータス（資格）になる" }] },
+            { title: "5. フィードバックの質", levels: [{ score: 0, text: "やりっぱなしで、誰からも教えてもらえない" }, { score: 4, text: "添削やアドバイスをもらえる機会がある" }, { score: 6, text: "アドバイス自体が神コンテンツになり、みんなの勉強になる" }] }
+        ];
+
+        const SCORING_D = [
+            { title: "1. 鉄壁のプロ意識", levels: [{ score: 0, text: "脇が甘く、すぐ炎上したりスキャンダルが出る" }, { score: 4, text: "世界観を徹底して守り、生活感（生々しさ）を出さない" }, { score: 6, text: "存在自体が「神」や「天使」のような聖域になっている" }] },
+            { title: "2. ファンのマナー管理", levels: [{ score: 0, text: "ファンが荒れていて、放置している" }, { score: 4, text: "ルールがあり、古参ファンが新規に優しく教えている" }, { score: 6, text: "「マナーが良いこと」がファンの誇りになっている" }] },
+            { title: "3. 努力を見せる力", levels: [{ score: 0, text: "結果しか見せず、頑張っている姿が見えない" }, { score: 4, text: "裏側の圧倒的な努力を見せ、尊敬されている" }, { score: 6, text: "成長の過程がドラマになり、ファンが「親目線」で見守っている" }] },
+            { title: "4. 安全な疑似恋愛", levels: [{ score: 0, text: "ガチ恋営業すぎて、金銭トラブルの匂いがする" }, { score: 4, text: "「みんなの恋人」を徹底し、特定の人を特別扱いしない" }, { score: 6, text: "恋愛を超えて「尊い」という感情になり、見返りを求められない" }] },
+            { title: "5. 供給の安定性", levels: [{ score: 0, text: "気まぐれ更新で、ファンが離れてしまう" }, { score: 4, text: "毎日たっぷりの供給があり、他の推しを見る暇がない" }, { score: 6, text: "ファンが切り抜きや絵を作って盛り上げ、供給が止まらない" }] }
+        ];
+
+        // --- Components ---
+        const ScoringCard = ({ title, metrics, maxScore, colorClass = "indigo" }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const passingScore = Math.ceil(maxScore * 0.65);
+            
+            const colors = {
+                teal: "border-teal-500 bg-teal-50 text-teal-800",
+                violet: "border-violet-500 bg-violet-50 text-violet-800",
+                orange: "border-orange-500 bg-orange-50 text-orange-800",
+                pink: "border-pink-500 bg-pink-50 text-pink-800",
+                indigo: "border-indigo-500 bg-indigo-50 text-indigo-800"
+            };
+            
+            const theme = colors[colorClass] || colors.indigo;
+
+            return (
+                <div className={`bg-white rounded-lg border-l-4 shadow-sm overflow-hidden mt-4 ${colorClass === 'teal' ? 'border-teal-500' : colorClass === 'violet' ? 'border-violet-500' : colorClass === 'orange' ? 'border-orange-500' : colorClass === 'pink' ? 'border-pink-500' : 'border-indigo-500'}`}>
+                    <button 
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${theme.split(' ')[1]}`}>
+                                <Icons.Scale className={`w-5 h-5 ${theme.split(' ')[2]}`} />
+                            </div>
+                            <div className="text-left">
+                                <span className="font-bold text-slate-800 block">{title}</span>
+                                <span className="text-xs text-slate-500">
+                                    満点: <span className="font-bold text-slate-700">{maxScore}点</span> / 
+                                    合格目安: <span className="font-bold text-slate-700">{passingScore}点〜</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-100 px-3 py-1.5 rounded-full">
+                            {isOpen ? '閉じる' : '詳細を開く'}
+                            {isOpen ? <Icons.ChevronUp className="w-4 h-4" /> : <Icons.ChevronDown className="w-4 h-4" />}
+                        </div>
+                    </button>
+                    
+                    {isOpen && (
+                        <div className="p-5 bg-slate-50/50 border-t border-slate-100 space-y-6">
+                            {metrics.map((metric, idx) => (
+                                <div key={idx} className="border-b border-slate-200 pb-4 last:border-0 last:pb-0">
+                                    <h4 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
+                                        <span className={`w-1.5 h-4 rounded-full ${theme.split(' ')[1].replace('bg-', 'bg-').replace('50', '400')}`}></span>
+                                        {metric.title}
+                                    </h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        {metric.levels.map((level, lIdx) => (
+                                            <div key={lIdx} className={`p-2.5 rounded border ${level.score === 0 ? 'bg-red-50 border-red-100 text-red-800' : level.score === 6 ? `bg-white border-${colorClass}-200 shadow-sm font-bold text-slate-800` : 'bg-white border-slate-100 text-slate-600'}`}>
+                                                <span className={`inline-block w-6 font-bold ${level.score === 0 ? 'text-red-600' : `text-${colorClass}-600`}`}>{level.score}:</span>
+                                                {level.text}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const PositioningMap = () => {
+            return (
+                <div className="relative bg-white rounded-xl shadow-sm p-4 md:p-8 border border-slate-200 aspect-square md:aspect-[21/9] overflow-hidden group">
+                    
+                    <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
+                        {/* Top Left: Type A */}
+                        <div className="bg-teal-50/40 border-r border-b border-slate-300 flex flex-col items-center justify-center p-4 relative hover:bg-teal-50/80 transition-colors duration-300">
+                            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                                <Icons.Users className="w-64 h-64 text-teal-600" />
+                            </div>
+                            <div className="z-10 text-center transform transition-transform duration-300 hover:scale-105">
+                                <div className="bg-teal-600 text-white text-sm font-bold px-3 py-1 rounded-full inline-block mb-3 shadow-sm">Type A</div>
+                                <h4 className="text-3xl md:text-4xl font-extrabold text-teal-900 mb-2">Mirror</h4>
+                                <p className="text-sm md:text-base text-teal-700 font-bold tracking-wide mb-2">模倣・日常・共感</p>
+                                <div className="h-0.5 w-12 bg-teal-400 mx-auto mb-3"></div>
+                                <p className="text-xs md:text-sm text-slate-600 font-medium">
+                                    憧れの日常を真似する<br/>
+                                    <span className="text-teal-700 font-bold">◎ 最推奨・LTV最大</span>
+                                </p>
+                            </div>
+                        </div>
+                        {/* Top Right: Type C */}
+                        <div className="bg-orange-50/40 border-b border-slate-300 flex flex-col items-center justify-center p-4 relative hover:bg-orange-50/80 transition-colors duration-300">
+                            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                                <Icons.Dumbbell className="w-64 h-64 text-orange-600" />
+                            </div>
+                            <div className="z-10 text-center transform transition-transform duration-300 hover:scale-105">
+                                <div className="bg-orange-600 text-white text-sm font-bold px-3 py-1 rounded-full inline-block mb-3 shadow-sm">Type C</div>
+                                <h4 className="text-3xl md:text-4xl font-extrabold text-orange-900 mb-2">Gym</h4>
+                                <p className="text-sm md:text-base text-orange-700 font-bold tracking-wide mb-2">機能・成果・共闘</p>
+                                <div className="h-0.5 w-12 bg-orange-400 mx-auto mb-3"></div>
+                                <p className="text-xs md:text-sm text-slate-600 font-medium">
+                                    実利のために汗をかく<br/>
+                                    <span className="text-orange-700 font-bold">自走する組織</span>
+                                </p>
+                            </div>
+                        </div>
+                        {/* Bottom Left: Type D */}
+                        <div className="bg-pink-50/40 border-r border-slate-300 flex flex-col items-center justify-center p-4 relative hover:bg-pink-50/80 transition-colors duration-300">
+                            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                                <Icons.Heart className="w-64 h-64 text-pink-600" />
+                            </div>
+                            <div className="z-10 text-center transform transition-transform duration-300 hover:scale-105">
+                                <div className="bg-pink-600 text-white text-sm font-bold px-3 py-1 rounded-full inline-block mb-3 shadow-sm">Type D</div>
+                                <h4 className="text-3xl md:text-4xl font-extrabold text-pink-900 mb-2">Idol</h4>
+                                <p className="text-sm md:text-base text-pink-700 font-bold tracking-wide mb-2">存在・崇拝・視覚</p>
+                                <div className="h-0.5 w-12 bg-pink-400 mx-auto mb-3"></div>
+                                <p className="text-xs md:text-sm text-slate-600 font-medium">
+                                    尊さを愛でる聖域<br/>
+                                    <span className="text-pink-700 font-bold">騎士団化が必須</span>
+                                </p>
+                            </div>
+                        </div>
+                        {/* Bottom Right: Type B */}
+                        <div className="bg-violet-50/40 flex flex-col items-center justify-center p-4 relative hover:bg-violet-50/80 transition-colors duration-300">
+                            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                                <Icons.Video className="w-64 h-64 text-violet-600" />
+                            </div>
+                            <div className="z-10 text-center transform transition-transform duration-300 hover:scale-105">
+                                <div className="bg-violet-600 text-white text-sm font-bold px-3 py-1 rounded-full inline-block mb-3 shadow-sm">Type B</div>
+                                <h4 className="text-3xl md:text-4xl font-extrabold text-violet-900 mb-2">Theater</h4>
+                                <p className="text-sm md:text-base text-violet-700 font-bold tracking-wide mb-2">物語・思想・哲学</p>
+                                <div className="h-0.5 w-12 bg-violet-400 mx-auto mb-3"></div>
+                                <p className="text-xs md:text-sm text-slate-600 font-medium">
+                                    壮大な物語を消費する<br/>
+                                    <span className="text-violet-700 font-bold">信者・共犯者</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <div className="h-full w-0.5 bg-slate-300 relative shadow-sm">
+                            <div className="absolute top-2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap shadow-lg z-20">Player (行動・当事者)</div>
+                            <div className="absolute bottom-2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap shadow-lg z-20">Audience (観客・応援者)</div>
+                        </div>
+                        <div className="w-full h-0.5 bg-slate-300 absolute shadow-sm">
+                            <div className="absolute left-2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap shadow-lg z-20">Emotional (情緒・共感)</div>
+                            <div className="absolute right-2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap shadow-lg z-20">Functional (機能・構造)</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const InfluencerDiagnosticSystem = () => {
+            return (
+                <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-indigo-100">
+                    <header className="bg-indigo-900 text-white shadow-lg sticky top-0 z-50">
+                        <div className="max-w-6xl mx-auto px-6 py-4">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <div className="flex items-center gap-2 text-indigo-300 text-xs font-mono mb-1">
+                                        <span className="bg-indigo-800 px-2 py-0.5 rounded">v3.5 (Complete)</span>
+                                        <span className="border border-indigo-600 px-2 py-0.5 rounded text-xs">Full Spec Mode</span>
+                                    </div>
+                                    <h1 className="text-xl font-bold tracking-tight">インフルエンサー・コミュニティ診断システム詳細設計書</h1>
+                                </div>
+                                <div className="hidden md:block text-right text-xs text-indigo-300">Target: コミュニティ事業部 / リサーチチーム<br/>Base Logic: v3.0 + v3.5 Update</div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-6xl mx-auto px-6 py-10 space-y-16">
+                        
+                        {/* 1. Grand Architecture */}
+                        <section>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                <Icons.BookOpen className="w-6 h-6 text-indigo-600" />
+                                1. コミュニティ診断の全体構造 (Grand Architecture)
+                            </h2>
+                            <div className="mb-8">
+                                <PositioningMap />
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-indigo-600">
+                                <p className="text-slate-600 leading-relaxed mb-4 text-sm">
+                                    インフルエンサーを「4つの構造」に分類し、勝率の高い運営スタイルを決定する。
+                                    <br/>
+                                    上図の<strong className="text-teal-600 bg-teal-50 px-1">【Type A】ミラー型</strong>（左上象限）を最推奨とし、LTVの高い安定したコミュニティ構築を目指す。
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                                    <div className="bg-teal-50 p-3 rounded border border-teal-100">
+                                        <strong className="block text-teal-800 mb-1 text-sm">【Type A】Mirror</strong>
+                                        <span className="text-xs text-teal-600">行動(Player) × 情緒(Emotional)</span>
+                                        <p className="text-[10px] text-slate-500 mt-1">憧れを原動力に自ら真似する</p>
+                                    </div>
+                                    <div className="bg-orange-50 p-3 rounded border border-orange-100">
+                                        <strong className="block text-orange-800 mb-1 text-sm">【Type C】Gym</strong>
+                                        <span className="text-xs text-orange-600">行動(Player) × 機能(Functional)</span>
+                                        <p className="text-[10px] text-slate-500 mt-1">成果を原動力に自ら鍛える</p>
+                                    </div>
+                                    <div className="bg-pink-50 p-3 rounded border border-pink-100">
+                                        <strong className="block text-pink-800 mb-1 text-sm">【Type D】Idol</strong>
+                                        <span className="text-xs text-pink-600">観客(Audience) × 情緒(Emotional)</span>
+                                        <p className="text-[10px] text-slate-500 mt-1">尊さを原動力に見守る</p>
+                                    </div>
+                                    <div className="bg-violet-50 p-3 rounded border border-violet-100">
+                                        <strong className="block text-violet-800 mb-1 text-sm">【Type B】Theater</strong>
+                                        <span className="text-xs text-violet-600">観客(Audience) × 構造(Functional)</span>
+                                        <p className="text-[10px] text-slate-500 mt-1">物語構造を原動力に解釈する</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 2. Type Definitions */}
+                        <section>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                <Icons.List className="w-6 h-6 text-indigo-600" />
+                                2. 各タイプ詳細説明 (Type Definitions)
+                            </h2>
+                            
+                            <div className="space-y-10">
+                                <div id="type-a" className="scroll-mt-20">
+                                    <div className="flex items-center gap-4 border-b-2 border-teal-500 pb-4 mb-6">
+                                        <div className="bg-teal-100 p-3 rounded-lg"><Icons.Users className="w-8 h-8 text-teal-600" /></div>
+                                        <div><h2 className="text-2xl font-bold text-slate-900">Type A: ミラー型 (The Mirror)</h2><p className="text-teal-700 font-bold text-sm">【日常】と【憧れ】を模倣・共感する関係 / 最もLTVが高く安定する</p></div>
+                                        <div className="ml-auto hidden sm:block"><span className="bg-teal-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">◎ 最推奨</span></div>
+                                    </div>
+                                    <div className="grid lg:grid-cols-3 gap-6 mb-6">
+                                        <div className="bg-white p-5 rounded-xl shadow-sm border border-teal-100"><h3 className="font-bold text-teal-800 mb-1">A-1 人生変容型 (Life-shift)</h3><div className="text-xs text-slate-500 mb-3">思想共感 / ビフォーアフター</div><p className="text-sm text-slate-600 mb-3">強い価値観・生き方に共感して集まる。美やキャリアでの劇的変化が求心力。</p><div className="bg-slate-50 p-2 rounded text-xs text-slate-500"><span className="font-bold text-teal-700">適合例:</span> <span className="font-semibold text-slate-700">明日花キララ</span>、<span className="font-semibold text-slate-700">古川優香</span></div></div>
+                                        <div className="bg-white p-5 rounded-xl shadow-sm border border-teal-100"><h3 className="font-bold text-teal-800 mb-1">A-2 存在推し型 (Personality)</h3><div className="text-xs text-slate-500 mb-3">人柄共感 / エンタメ</div><p className="text-sm text-slate-600 mb-3">人柄・存在そのものが好き。発信は人格中心。「横のつながり」作りがカギ。</p><div className="bg-slate-50 p-2 rounded text-xs text-slate-500"><span className="font-bold text-teal-700">適合例:</span> <span className="font-semibold text-slate-700">平成フラミンゴ</span>、<span className="font-semibold text-slate-700">とうあ</span></div></div>
+                                        <div className="bg-white p-5 rounded-xl shadow-sm border-2 border-teal-500 relative"><div className="absolute top-0 right-0 bg-teal-500 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold">LTV最大</div><h3 className="font-bold text-teal-800 mb-1">A-3 暮らし模倣型 (Lifestyle)</h3><div className="text-xs text-slate-500 mb-3">日常共感 / 憧れ</div><p className="text-sm text-slate-600 mb-3">日常の暮らし・美意識に共感し、「自分もこうなりたい」と集まる最上位形態。</p><div className="bg-slate-50 p-2 rounded text-xs text-slate-500"><span className="font-bold text-teal-700">適合例:</span> <span className="font-semibold text-slate-700">辻希美</span>、<span className="font-semibold text-slate-700">滝沢眞規子</span></div></div>
+                                    </div>
+                                    <div className="bg-teal-50 rounded-lg p-5"><div className="grid md:grid-cols-2 gap-6"><div><h4 className="text-sm font-bold text-teal-800 mb-2">🎯 判定トリガー (Q&A)</h4><ul className="list-disc list-inside text-sm text-teal-900 space-y-1"><li>「真似したい」「参考にしたい」と思われているか？</li><li>「私も同じ悩みがある」という当事者意識で繋がっているか？</li></ul></div><div><h4 className="text-sm font-bold text-teal-800 mb-2">🔑 キーワード</h4><div className="flex flex-wrap gap-2">{["Vlog", "モーニングルーティン", "ママ", "丁寧な暮らし", "美容", "相談"].map(k => (<span key={k} className="bg-white text-teal-700 px-2 py-1 rounded text-xs shadow-sm">{k}</span>))}</div></div></div></div>
+                                </div>
+
+                                {/* Type B */}
+                                <div id="type-b" className="scroll-mt-20">
+                                    <div className="flex items-center gap-4 border-b-2 border-violet-500 pb-4 mb-6">
+                                        <div className="bg-violet-100 p-3 rounded-lg"><Icons.Video className="w-8 h-8 text-violet-600" /></div>
+                                        <div><h2 className="text-2xl font-bold text-slate-900">Type B: シアター型 (The Theater)</h2><p className="text-violet-700 font-bold text-sm">【物語】と【思想】を観客として消費・応援する関係</p></div>
+                                        <div className="ml-auto hidden sm:block"><span className="bg-violet-100 text-violet-800 px-4 py-1.5 rounded-full text-sm font-bold">◯ 条件付</span></div>
+                                    </div>
+                                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                                        <div className="bg-white p-5 rounded-xl shadow-sm border border-violet-100"><h3 className="font-bold text-violet-800 mb-1">B-1 ビジョナリー・宗教型</h3><div className="text-xs text-slate-500 mb-2">希望・前進・建設的</div><p className="text-sm text-slate-600">「誰も見たことのない未来」を見せ、新しい世界を作るために集まる。</p></div>
+                                        <div className="bg-slate-100 p-5 rounded-xl border border-slate-200 opacity-80"><div className="flex justify-between items-start"><h3 className="font-bold text-slate-600 mb-1">B-2 レジスタンス・劇場型</h3><span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded font-bold">危険・除外</span></div><div className="text-xs text-slate-500 mb-2">怒り・発散・スリル</div><p className="text-sm text-slate-600">「敵・世間の常識」と戦う修羅場を供給し続ける。「平和のジレンマ」を抱える。</p></div>
+                                    </div>
+                                </div>
+
+                                {/* Type C */}
+                                <div id="type-c" className="scroll-mt-20">
+                                    <div className="flex items-center gap-4 border-b-2 border-orange-500 pb-4 mb-6">
+                                        <div className="bg-orange-100 p-3 rounded-lg"><Icons.Dumbbell className="w-8 h-8 text-orange-600" /></div>
+                                        <div><h2 className="text-2xl font-bold text-slate-900">Type C: ジム型 (The Gym)</h2><p className="text-orange-700 font-bold text-sm">【機能】と【成果】でつながる関係</p></div>
+                                        <div className="ml-auto hidden sm:block"><span className="bg-orange-100 text-orange-800 px-4 py-1.5 rounded-full text-sm font-bold">◯ 条件付</span></div>
+                                    </div>
+                                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                                        <div className="bg-white p-5 rounded-xl shadow-sm border border-orange-100"><h3 className="font-bold text-orange-800 mb-1">C-1 アカデミー・先生型</h3><div className="text-xs text-slate-500 mb-2">知識・ノウハウ / トップダウン</div><p className="text-sm text-slate-600">「知識」を学ぶ学校。コンテンツの鮮度が命。卒業（解約）されやすい。</p></div>
+                                        <div className="bg-white p-5 rounded-xl shadow-sm border-2 border-orange-400 relative"><div className="absolute top-0 right-0 bg-orange-400 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold">推奨</div><h3 className="font-bold text-orange-800 mb-1">C-2 ブートキャンプ・部活型</h3><div className="text-xs text-slate-500 mb-2">習慣・行動 / 横の連帯</div><p className="text-sm text-slate-600">「行動」を変えるジム。環境設計が勝ち筋。</p></div>
+                                    </div>
+                                </div>
+
+                                {/* Type D */}
+                                <div id="type-d" className="scroll-mt-20">
+                                    <div className="flex items-center gap-4 border-b-2 border-pink-500 pb-4 mb-6">
+                                        <div className="bg-pink-100 p-3 rounded-lg"><Icons.Heart className="w-8 h-8 text-pink-600" /></div>
+                                        <div><h2 className="text-2xl font-bold text-slate-900">Type D: アイドル型 (The Idol)</h2><p className="text-pink-700 font-bold text-sm">【存在】と【聖域】を崇拝・愛でる関係</p></div>
+                                        <div className="ml-auto hidden sm:block"><span className="bg-pink-100 text-pink-800 px-4 py-1.5 rounded-full text-sm font-bold">△ 例外のみ</span></div>
+                                    </div>
+                                    <div className="bg-pink-50 p-4 rounded-lg border border-pink-200 mb-6"><h4 className="font-bold text-pink-800 mb-2 flex items-center gap-2"><Icons.Shield className="w-4 h-4" />成功の鍵：騎士団メンタリティ</h4><p className="text-sm text-pink-900">単なる人気者ではなく、<strong>「推しが最高であり続けるために、私たちが支え、行儀よくする」</strong>という共同体意識（騎士団化）が必須。</p></div>
+                                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                                        <div className="bg-white p-5 rounded-xl shadow-sm border border-pink-100"><h3 className="font-bold text-pink-800 mb-1">D-1 サンクチュアリ・聖域型</h3><div className="text-xs text-slate-500 mb-2">崇拝・鑑賞 / プラトニック</div><p className="text-sm text-slate-600">手の届かない「プロのアイドル」。鉄壁のプロ意識と世界観維持が条件。</p></div>
+                                        <div className="bg-slate-100 p-5 rounded-xl border border-slate-200 opacity-80"><div className="flex justify-between items-start"><h3 className="font-bold text-slate-600 mb-1">D-2 ガチ恋・ラウンジ型</h3><span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded font-bold">不合格</span></div><div className="text-xs text-slate-500 mb-2">独占欲・嫉妬 / ウェット</div><p className="text-sm text-slate-600">疑似恋愛や距離の近さを売りにする接客業スタイル。焼畑農業になる。</p></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 3. Gateway Logic */}
+                        <section>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                <Icons.GitMerge className="w-6 h-6 text-indigo-600" />
+                                3. インフルエンサー・コミュニティ型判定ロジック (Gateway Logic)
+                            </h2>
+                            <div className="bg-slate-100 p-6 rounded-xl">
+                                <p className="text-xs text-slate-500 mb-4 text-center">※判定は以下の優先順位（Priority）で行う。上位の条件に当てはまる場合、下位は見ない。</p>
+                                <div className="flex flex-col gap-3">
+                                    {GATEWAY_STEPS.map((step) => (
+                                        <div key={step.id} className={`relative flex items-center bg-white p-4 rounded-lg shadow-sm border-l-4 border-${step.color}-500 hover:shadow-md transition-shadow`}>
+                                            <div className={`bg-${step.color}-100 text-${step.color}-700 p-2 rounded-full mr-4 shrink-0`}>{step.icon}</div>
+                                            <div className="flex-grow"><div className="flex justify-between items-center mb-1"><span className={`text-xs font-bold text-${step.color}-600`}>{step.label}</span><span className="text-xs text-slate-400 font-mono">{step.sub}</span></div><h4 className="font-bold text-slate-800">{step.question}</h4><p className="text-xs text-slate-500 mt-1">{step.desc}</p></div>
+                                            <div className="ml-4 pl-4 border-l border-slate-100 flex flex-col items-center justify-center shrink-0"><span className={`text-sm font-bold text-${step.color}-600`}>YES</span><span className="text-xs text-slate-400">↓</span><a href={`#type-${step.id.toLowerCase()}`} className={`text-xs font-bold bg-${step.color}-50 text-${step.color}-700 px-2 py-0.5 rounded hover:bg-${step.color}-100 transition-colors`}>Type {step.id}</a></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 4. Scoring Criteria */}
+                        <section>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                <Icons.Scale className="w-6 h-6 text-indigo-600" />
+                                4. 詳細スコアリング基準 (Scoring Criteria)
+                            </h2>
+                            <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                                <p className="text-slate-600 mb-6 text-sm">判定されたタイプに基づき、以下の基準で厳格な採点を行う。<br/><span className="text-red-500 font-bold text-xs">※疑わしきは0点（欠落）として処理すること。</span></p>
+                                <div className="space-y-6">
+                                    <div><h3 className="font-bold text-teal-800 border-b border-teal-200 pb-2 mb-2 flex items-center gap-2"><Icons.Users className="w-5 h-5" /> Type A: Mirror Scoring</h3><ScoringCard title="Type A: 8指標 × 6点満点" metrics={SCORING_A} maxScore={48} colorClass="teal" /></div>
+                                    <div><h3 className="font-bold text-orange-800 border-b border-orange-200 pb-2 mb-2 flex items-center gap-2"><Icons.Dumbbell className="w-5 h-5" /> Type C: Gym Scoring</h3><ScoringCard title="Type C: 5指標 × 6点満点" metrics={SCORING_C} maxScore={30} colorClass="orange" /></div>
+                                    <div><h3 className="font-bold text-pink-800 border-b border-pink-200 pb-2 mb-2 flex items-center gap-2"><Icons.Heart className="w-5 h-5" /> Type D: Idol Scoring</h3><ScoringCard title="Type D: 5指標 × 6点満点" metrics={SCORING_D} maxScore={30} colorClass="pink" /></div>
+                                    <div><h3 className="font-bold text-violet-800 border-b border-violet-200 pb-2 mb-2 flex items-center gap-2"><Icons.Video className="w-5 h-5" /> Type B: Theater Scoring</h3><ScoringCard title="Type B: 5指標 × 6点満点" metrics={SCORING_B} maxScore={30} colorClass="violet" /></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 5. Final Decision */}
+                        <section className="bg-indigo-900 text-white rounded-xl p-8 shadow-xl">
+                            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Icons.Target className="w-6 h-6 text-yellow-400" />5. 総合判定ロジック (Final Decision)</h2>
+                            <div className="bg-indigo-800/50 p-4 rounded-lg mb-6 border border-indigo-700"><p className="text-sm text-indigo-200">原則として<strong className="text-white">得点率 65%以上で合格</strong>となります。</p></div>
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="bg-white text-slate-800 rounded-lg overflow-hidden shadow-lg"><div className="bg-teal-600 text-white p-3 font-bold text-center border-b border-teal-700">Type A (48点満点)</div><div className="p-4 space-y-3"><div className="flex items-center justify-between p-3 bg-indigo-50 rounded border-l-4 border-indigo-600"><div><div className="text-xs font-bold text-indigo-800">🏅 合格 (Adopt)</div></div><div className="text-xl font-bold text-indigo-700">32点〜</div></div><div className="flex items-center justify-between p-3 bg-amber-50 rounded border-l-4 border-amber-500"><div><div className="text-xs font-bold text-amber-800">🥈 条件付 (Conditional)</div></div><div className="text-xl font-bold text-amber-700">24点〜</div></div><div className="flex items-center justify-between p-3 bg-red-50 rounded border-l-4 border-red-500"><div><div className="text-xs font-bold text-red-800">❌ 不合格 (Reject)</div></div><div className="text-xl font-bold text-red-700">〜23点</div></div></div></div>
+                                <div className="bg-white text-slate-800 rounded-lg overflow-hidden shadow-lg"><div className="bg-slate-600 text-white p-3 font-bold text-center border-b border-slate-700">Type B / C / D (30点満点)</div><div className="p-4 space-y-3"><div className="flex items-center justify-between p-3 bg-indigo-50 rounded border-l-4 border-indigo-600"><div><div className="text-xs font-bold text-indigo-800">🏅 合格 (Adopt)</div></div><div className="text-xl font-bold text-indigo-700">20点〜</div></div><div className="flex items-center justify-between p-3 bg-amber-50 rounded border-l-4 border-amber-500"><div><div className="text-xs font-bold text-amber-800">🥈 条件付 (Conditional)</div></div><div className="text-xl font-bold text-amber-700">15点〜</div></div><div className="flex items-center justify-between p-3 bg-red-50 rounded border-l-4 border-red-500"><div><div className="text-xs font-bold text-red-800">❌ 不合格 (Reject)</div></div><div className="text-xl font-bold text-red-700">〜14点</div></div></div></div>
+                            </div>
+                        </section>
+
+                    </main>
+                    <footer className="max-w-6xl mx-auto px-6 py-8 text-center text-slate-400 text-xs"><p>© 2025 Community Division. Confidential Internal Document.</p></footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<InfluencerDiagnosticSystem />);
+    </script>
+</body>
+</html>
